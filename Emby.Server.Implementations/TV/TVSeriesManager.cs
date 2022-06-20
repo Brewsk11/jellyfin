@@ -33,7 +33,7 @@ namespace Emby.Server.Implementations.TV
             _configurationManager = configurationManager;
         }
 
-        public QueryResult<BaseItem> GetNextUp(NextUpQuery query, DtoOptions options)
+        public QueryResult<BaseItem> GetNextUp(NextUpTVQuery query, DtoOptions options)
         {
             var user = _userManager.GetUserById(query.UserId);
 
@@ -82,7 +82,7 @@ namespace Emby.Server.Implementations.TV
             return GetNextUp(query, parents, options);
         }
 
-        public QueryResult<BaseItem> GetNextUp(NextUpQuery request, BaseItem[] parentsFolders, DtoOptions options)
+        public QueryResult<BaseItem> GetNextUp(NextUpTVQuery request, BaseItem[] parentsFolders, DtoOptions options)
         {
             var user = _userManager.GetUserById(request.UserId);
 
@@ -135,7 +135,7 @@ namespace Emby.Server.Implementations.TV
             return GetResult(episodes, request);
         }
 
-        public IEnumerable<Episode> GetNextUpEpisodes(NextUpQuery request, User user, IReadOnlyList<string> seriesKeys, DtoOptions dtoOptions)
+        public IEnumerable<Episode> GetNextUpEpisodes(NextUpTVQuery request, User user, IReadOnlyList<string> seriesKeys, DtoOptions dtoOptions)
         {
             // Avoid implicitly captured closure
             var currentUser = user;
@@ -312,7 +312,7 @@ namespace Emby.Server.Implementations.TV
             return new Tuple<DateTime, Func<Episode>>(DateTime.MinValue, getEpisode);
         }
 
-        private static QueryResult<BaseItem> GetResult(IEnumerable<BaseItem> items, NextUpQuery query)
+        private static QueryResult<BaseItem> GetResult(IEnumerable<BaseItem> items, NextUpTVQuery query)
         {
             int totalCount = 0;
 

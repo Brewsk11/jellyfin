@@ -6,9 +6,9 @@ using MediaBrowser.Model.Entities;
 
 namespace MediaBrowser.Model.Querying
 {
-    public class NextUpQuery
+    public class NextUpTVQuery
     {
-        public NextUpQuery()
+        public NextUpTVQuery()
         {
             EnableImageTypes = Array.Empty<ImageType>();
             EnableTotalRecordCount = true;

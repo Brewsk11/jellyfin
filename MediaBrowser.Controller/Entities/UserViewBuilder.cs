@@ -333,7 +333,7 @@ namespace MediaBrowser.Controller.Entities
             var parentFolders = GetMediaFolders(parent, query.User, new[] { CollectionType.TvShows, string.Empty });
 
             var result = _tvSeriesManager.GetNextUp(
-                new NextUpQuery
+                new NextUpTVQuery
                 {
                     Limit = query.Limit,
                     StartIndex = query.StartIndex,

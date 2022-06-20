@@ -1020,7 +1020,7 @@ namespace Emby.Dlna.ContentDirectory
             query.OrderBy = Array.Empty<(string, SortOrder)>();
 
             var result = _tvSeriesManager.GetNextUp(
-                new NextUpQuery
+                new NextUpTVQuery
                 {
                     Limit = query.Limit,
                     StartIndex = query.StartIndex,

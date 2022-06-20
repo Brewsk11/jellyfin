@@ -6,8 +6,12 @@ using Jellyfin.Api.Extensions;
 using Jellyfin.Api.ModelBinders;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Dto;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Collections;
+using MediaBrowser.Model.Dto;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -21,6 +25,7 @@ namespace Jellyfin.Api.Controllers
     [Authorize(Policy = Policies.DefaultAuthorization)]
     public class CollectionController : BaseJellyfinApiController
     {
+        private readonly IUserManager _userManager;
         private readonly ICollectionManager _collectionManager;
         private readonly IDtoService _dtoService;
         private readonly IAuthorizationContext _authContext;
@@ -28,14 +33,17 @@ namespace Jellyfin.Api.Controllers
         /// <summary>
         /// Initializes a new instance of the <see cref="CollectionController"/> class.
         /// </summary>
+        /// <param name="userManager">Instance of <see cref="IUserManager"/> interface.</param>
         /// <param name="collectionManager">Instance of <see cref="ICollectionManager"/> interface.</param>
         /// <param name="dtoService">Instance of <see cref="IDtoService"/> interface.</param>
         /// <param name="authContext">Instance of <see cref="IAuthorizationContext"/> interface.</param>
         public CollectionController(
+            IUserManager userManager,
             ICollectionManager collectionManager,
             IDtoService dtoService,
             IAuthorizationContext authContext)
         {
+            _userManager = userManager;
             _collectionManager = collectionManager;
             _dtoService = dtoService;
             _authContext = authContext;
@@ -111,6 +119,73 @@ namespace Jellyfin.Api.Controllers
         {
             await _collectionManager.RemoveFromCollectionAsync(collectionId, ids).ConfigureAwait(false);
             return NoContent();
+        }
+
+        /// <summary>
+        /// Gets a list of next up movies in collection.
+        /// </summary>
+        /// <param name="userId">The user id of the user to get the next up episodes for.</param>
+        /// <param name="startIndex">Optional. The record index to start at. All items with a lower index will be dropped from the results.</param>
+        /// <param name="limit">Optional. The maximum number of records to return.</param>
+        /// <param name="fields">Optional. Specify additional fields of information to return in the output.</param>
+        /// <param name="seriesId">Optional. Filter by series id.</param>
+        /// <param name="parentId">Optional. Specify this to localize the search to a specific item or folder. Omit to use the root.</param>
+        /// <param name="enableImages">Optional. Include image information in output.</param>
+        /// <param name="imageTypeLimit">Optional. The max number of images to return, per image type.</param>
+        /// <param name="enableImageTypes">Optional. The image types to include in the output.</param>
+        /// <param name="enableUserData">Optional. Include user data.</param>
+        /// <param name="nextUpDateCutoff">Optional. Starting date of shows to show in Next Up section.</param>
+        /// <param name="enableTotalRecordCount">Whether to enable the total records count. Defaults to true.</param>
+        /// <param name="disableFirstEpisode">Whether to disable sending the first episode in a series as next up.</param>
+        /// <param name="enableRewatching">Whether to include watched episode in next up results.</param>
+        /// <returns>A <see cref="QueryResult{BaseItemDto}"/> with the next up episodes.</returns>
+        [HttpGet("NextUp")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public ActionResult<QueryResult<BaseItemDto>> GetNextUp(
+            [FromQuery] Guid? userId,
+            [FromQuery] int? startIndex,
+            [FromQuery] int? limit,
+            [FromQuery, ModelBinder(typeof(CommaDelimitedArrayModelBinder))] ItemFields[] fields,
+            [FromQuery] string? seriesId,
+            [FromQuery] Guid? parentId,
+            [FromQuery] bool? enableImages,
+            [FromQuery] int? imageTypeLimit,
+            [FromQuery, ModelBinder(typeof(CommaDelimitedArrayModelBinder))] ImageType[] enableImageTypes,
+            [FromQuery] bool? enableUserData,
+            [FromQuery] DateTime? nextUpDateCutoff,
+            [FromQuery] bool enableTotalRecordCount = true,
+            [FromQuery] bool disableFirstEpisode = false,
+            [FromQuery] bool enableRewatching = false)
+        {
+            var options = new DtoOptions { Fields = fields }
+                .AddClientFields(Request)
+                .AddAdditionalDtoOptions(enableImages, enableUserData, imageTypeLimit, enableImageTypes);
+
+            var result = _collectionManager.GetNextUp(
+                new NextUpMoviesQuery
+                {
+                    Limit = limit,
+                    ParentId = parentId,
+                    SeriesId = seriesId,
+                    StartIndex = startIndex,
+                    UserId = userId ?? Guid.Empty,
+                    EnableTotalRecordCount = enableTotalRecordCount,
+                    DisableFirstEpisode = disableFirstEpisode,
+                    NextUpDateCutoff = nextUpDateCutoff ?? DateTime.MinValue,
+                    EnableRewatching = enableRewatching
+                },
+                options);
+
+            var user = userId is null || userId.Value.Equals(default)
+                ? null
+                : _userManager.GetUserById(userId.Value);
+
+            var returnItems = _dtoService.GetBaseItemDtos(result.Items, options, user);
+
+            return new QueryResult<BaseItemDto>(
+                startIndex,
+                result.TotalRecordCount,
+                returnItems);
         }
     }
 }

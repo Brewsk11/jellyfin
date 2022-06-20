@@ -93,7 +93,7 @@ namespace Jellyfin.Api.Controllers
                 .AddAdditionalDtoOptions(enableImages, enableUserData, imageTypeLimit, enableImageTypes);
 
             var result = _tvSeriesManager.GetNextUp(
-                new NextUpQuery
+                new NextUpTVQuery
                 {
                     Limit = limit,
                     ParentId = parentId,
